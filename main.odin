@@ -1,15 +1,11 @@
-// TODO: sorting out the library, progressive jpeg, cache library?, fix the time bar on the bottom, learn how to generate lists for clicking through
-
+// TODO: sorting out the library(partial done), cache library?, fix the time bar on the bottom, learn how to generate lists for clicking through
 package main
 
 import "core:fmt"
 import "core:os"
-
+import md "metadata"
+import pl "player"
 import rl "vendor:raylib"
-
-
-KEY_REPEAT_DELAY :: 0.35
-KEY_REPEAT_RATE :: 0.08
 
 main :: proc() {
 	// Get home envirment and attach default Music location (for now this is hardcoded)
@@ -17,8 +13,8 @@ main :: proc() {
 	lib_path := fmt.aprintf("%s/Music", home)
 
 	// Init the library at our ~/Music path
-	lib_ok := init_library(lib_path)
-	defer uninit_library()
+	lib_ok := pl.init_library(lib_path)
+	defer pl.uninit_library()
 
 	delete(lib_path)
 	delete(home)
@@ -35,13 +31,13 @@ main :: proc() {
 	rl.SetWindowMinSize(640, 480)
 
 	// Initialize the engine for playback
-	if !engine_init() {
+	if !pl.engine_init() {
 		fmt.eprintf("failed to initialize audio engine")
 	}
 
 	rep_up, rep_down: f64
 
-	defer engine_close()
+	defer pl.engine_close()
 
 	for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
@@ -53,34 +49,38 @@ main :: proc() {
 		w := f32(rl.GetScreenWidth())
 		h := f32(rl.GetScreenHeight())
 
-		rl.DrawText(rl.TextFormat("loaded: %d tracks", len(library)), 10, 60, 20, rl.BLACK)
+		rl.DrawText(rl.TextFormat("loaded: %d tracks", len(pl.library)), 10, 60, 20, rl.BLACK)
 
 
 		// put in the center of the window, scaled from whatever the cover size is
-		if art_loaded {
-			src := rl.Rectangle{0, 0, f32(art_tex.width), f32(art_tex.height)}
+		if md.art_loaded {
+			src := rl.Rectangle{0, 0, f32(md.art_tex.width), f32(md.art_tex.height)}
 			dst := rl.Rectangle {
 				f32(rl.GetScreenWidth() - 350) / 2,
 				f32(rl.GetScreenHeight() - 350) / 2,
 				350,
 				350,
 			}
-			rl.DrawTexturePro(art_tex, src, dst, rl.Vector2{}, 0, rl.WHITE)
+			rl.DrawTexturePro(md.art_tex, src, dst, rl.Vector2{}, 0, rl.WHITE)
 		}
 
 		// now-playing nothing loaded until the first play, so guard on curr_idx
-		if curr_idx >= 0 {
+		if pl.curr_idx >= 0 {
 			// title via TextFormat zero-allocated
 			// big title on top, artist--album under it, both left-justified
 			rl.DrawText(
-				rl.TextFormat("%s", library[curr_idx].title),
+				rl.TextFormat("%s", pl.library[pl.curr_idx].title),
 				10,
 				i32(h - 85),
 				28,
 				rl.BLACK,
 			)
 			rl.DrawText(
-				rl.TextFormat("%s -- %s", library[curr_idx].artist, library[curr_idx].album),
+				rl.TextFormat(
+					"%s -- %s",
+					pl.library[pl.curr_idx].artist,
+					pl.library[pl.curr_idx].album,
+				),
 				10,
 				i32(h - 50),
 				20,
@@ -91,23 +91,23 @@ main :: proc() {
 		// position text: "1:23 / 4:05"
 		ctime := rl.TextFormat(
 			"%d:%02d / %d:%02d",
-			int(track_pos) / 60,
-			int(track_pos) % 60,
-			int(track_len) / 60,
-			int(track_len) % 60,
+			int(pl.track_pos) / 60,
+			int(pl.track_pos) % 60,
+			int(pl.track_len) / 60,
+			int(pl.track_len) % 60,
 		)
 
 		// time right-justified, even with the artist--album line (h - 50)
 		tw := i32(rl.MeasureText(ctime, 20))
 		rl.DrawText(ctime, i32(w) - 10 - tw, i32(h - 50), 20, rl.BLACK)
 		// progress bar, only once length is known (track_len > 0)
-		if len_known {
+		if pl.len_known {
 			// bar right-justified under the time, width matches the time text
-			bar_w := f32(tw) * (track_pos / track_len)
+			bar_w := f32(tw) * (pl.track_pos / pl.track_len)
 			rl.DrawRectangle(i32(w) - 10 - tw, i32(h - 25), i32(bar_w), 8, rl.BLACK)
 		}
 
-		vol := rl.TextFormat("volume: %d:%%", int(volume * 100))
+		vol := rl.TextFormat("volume: %d:%%", int(pl.volume * 100))
 		rl.DrawText(vol, 0, 0, 20, rl.BLACK)
 
 		rl.EndDrawing()
@@ -115,39 +115,47 @@ main :: proc() {
 		key := rl.GetKeyPressed()
 		#partial switch key {
 		case .SPACE:
-			play_pause()
+			pl.play_pause()
 		case .L:
-			play_next()
+			pl.play_next()
+		case .RIGHT:
+			pl.play_next()
 		case .H:
-			play_previous()
+			pl.play_previous()
+		case .LEFT:
+			pl.play_previous()
 		case .EQUAL:
-			toggle_autoplay()
-		// case .UP:
-		// 	volume_up()
-		// case .DOWN:
-		// 	volume_down()
+			pl.toggle_autoplay()
 		case:
 		//Empty
 		}
 
 		if repeat_key(&rep_down, .DOWN) {
-			volume_down()
+			pl.volume_down()
 		}
 		if repeat_key(&rep_up, .UP) {
-			volume_up()
+			pl.volume_up()
 		}
 
-		handle_autoplay()
-		handle_art()
+		pl.handle_autoplay()
+		if pl.curr_idx >= 0 {
+			md.handle_art(pl.curr_idx, pl.library[pl.curr_idx].path)
+		}
 	}
 
 
-	if art_loaded {
-		rl.UnloadTexture(art_tex)
+	if md.art_loaded {
+		rl.UnloadTexture(md.art_tex)
 	}
 
 	rl.CloseWindow()
 }
+
+// This functions whole approach is to make up the gap in Raylib's key repeat logic
+// repeat_key get's frame time to create an OS-like key repeat based on the globals defined below so i can change if i want
+
+KEY_REPEAT_DELAY :: 0.35
+KEY_REPEAT_RATE :: 0.08
 
 repeat_key :: proc(ft: ^f64, key: rl.KeyboardKey) -> bool {
 	if rl.IsKeyPressed(key) {
