@@ -1,4 +1,3 @@
-// TODO: sorting out the library(partial done), cache library?, fix the time bar on the bottom, learn how to generate lists for clicking through
 package main
 
 import "core:fmt"
