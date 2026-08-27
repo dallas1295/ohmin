@@ -1,4 +1,4 @@
-// TODO: volume, sorting out the library, progressive jpeg, cache library?, fix the time bar on the bottom, learn how to generate lists for clicking thoruhg
+// TODO: sorting out the library, progressive jpeg, cache library?, fix the time bar on the bottom, learn how to generate lists for clicking through
 
 package main
 
@@ -6,6 +6,10 @@ import "core:fmt"
 import "core:os"
 
 import rl "vendor:raylib"
+
+
+KEY_REPEAT_DELAY :: 0.35
+KEY_REPEAT_RATE :: 0.08
 
 main :: proc() {
 	// Get home envirment and attach default Music location (for now this is hardcoded)
@@ -34,6 +38,9 @@ main :: proc() {
 	if !engine_init() {
 		fmt.eprintf("failed to initialize audio engine")
 	}
+
+	rep_up, rep_down: f64
+
 	defer engine_close()
 
 	for !rl.WindowShouldClose() {
@@ -100,6 +107,9 @@ main :: proc() {
 			rl.DrawRectangle(i32(w) - 10 - tw, i32(h - 25), i32(bar_w), 8, rl.BLACK)
 		}
 
+		vol := rl.TextFormat("volume: %d:%%", int(volume * 100))
+		rl.DrawText(vol, 0, 0, 20, rl.BLACK)
+
 		rl.EndDrawing()
 
 		key := rl.GetKeyPressed()
@@ -112,17 +122,50 @@ main :: proc() {
 			play_previous()
 		case .EQUAL:
 			toggle_autoplay()
+		// case .UP:
+		// 	volume_up()
+		// case .DOWN:
+		// 	volume_down()
 		case:
 		//Empty
+		}
+
+		if repeat_key(&rep_down, .DOWN) {
+			volume_down()
+		}
+		if repeat_key(&rep_up, .UP) {
+			volume_up()
 		}
 
 		handle_autoplay()
 		handle_art()
 	}
 
+
 	if art_loaded {
 		rl.UnloadTexture(art_tex)
 	}
 
 	rl.CloseWindow()
+}
+
+repeat_key :: proc(ft: ^f64, key: rl.KeyboardKey) -> bool {
+	if rl.IsKeyPressed(key) {
+		ft^ = -rl.GetTime()
+		return true
+	}
+	if !rl.IsKeyDown(key) {
+		return false
+	}
+	t := rl.GetTime()
+	if ft^ < 0 {
+		if t + ft^ >= KEY_REPEAT_DELAY {
+			ft^ = t
+			return true
+		}
+	} else if t - ft^ > KEY_REPEAT_RATE {
+		ft^ = t
+		return true
+	}
+	return false
 }

@@ -12,6 +12,7 @@ track_pos: f32
 track_len: f32
 len_known := false
 sound_loaded: bool
+volume: f32 = 0.50
 
 play_song :: proc() {
 	// if the curr_idx is above or at zero we uninit the sound prior to loading a new curr_track
@@ -31,6 +32,7 @@ play_song :: proc() {
 
 	// init the sound from the path provided by library and console error if something goes wrong
 	res := ma.sound_init_from_file(&engine, spath, {.STREAM, .ASYNC}, nil, nil, &curr_track)
+	ma.sound_set_volume(&curr_track, volume)
 	if res != .SUCCESS {
 		fmt.eprintfln("error loading sound file %s: %v", spath, res)
 		if curr_idx + 1 < len(library) {
@@ -112,4 +114,20 @@ handle_autoplay :: proc() {
 	if ma.sound_at_end(&curr_track) {
 		play_next()
 	}
+}
+
+volume_up :: proc() {
+	if volume += 0.01; volume > 1.0 {
+		volume = 1.0
+	}
+
+	ma.sound_set_volume(&curr_track, volume)
+}
+
+
+volume_down :: proc() {
+	if volume -= 0.01; volume < 0.0 {
+		volume = 0.0
+	}
+	ma.sound_set_volume(&curr_track, volume)
 }
