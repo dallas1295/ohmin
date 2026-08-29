@@ -1,6 +1,6 @@
 # TODO's
-- sorting out the library(partial done),
-- advanced sorting (per artist listings)
-- library cache (currently speed is virtually instantaneous though)
-- fix layouts
-- mouse friendly interaction (in addition to my nvim-esque requirements)
+- **P50** sorting out the library(partial done),
+- **P50** advanced sorting (per artist listings)
+- **P1** library cache (currently speed is virtually instantaneous though)
+- **P80** fix layouts
+- **P80** mouse friendly interaction (in addition to my nvim-esque requirements)
