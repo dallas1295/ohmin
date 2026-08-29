@@ -54,12 +54,7 @@ main :: proc() {
 		// put in the center of the window, scaled from whatever the cover size is
 		if md.art_loaded {
 			src := rl.Rectangle{0, 0, f32(md.art_tex.width), f32(md.art_tex.height)}
-			dst := rl.Rectangle {
-				f32(rl.GetScreenWidth() - 350) / 2,
-				f32(rl.GetScreenHeight() - 350) / 2,
-				350,
-				350,
-			}
+			dst := rl.Rectangle{10, h - 105, 100, 100}
 			rl.DrawTexturePro(md.art_tex, src, dst, rl.Vector2{}, 0, rl.WHITE)
 		}
 
@@ -69,7 +64,7 @@ main :: proc() {
 			// big title on top, artist--album under it, both left-justified
 			rl.DrawText(
 				rl.TextFormat("%s", pl.library[pl.curr_idx].title),
-				10,
+				120,
 				i32(h - 85),
 				28,
 				rl.BLACK,
@@ -80,7 +75,7 @@ main :: proc() {
 					pl.library[pl.curr_idx].artist,
 					pl.library[pl.curr_idx].album,
 				),
-				10,
+				120,
 				i32(h - 50),
 				20,
 				rl.BLACK,
@@ -102,12 +97,18 @@ main :: proc() {
 		// progress bar, only once length is known (track_len > 0)
 		if pl.len_known {
 			// bar right-justified under the time, width matches the time text
-			bar_w := f32(tw) * (pl.track_pos / pl.track_len)
-			rl.DrawRectangle(i32(w) - 10 - tw, i32(h - 25), i32(bar_w), 8, rl.BLACK)
+			rl.DrawRectangle(120, i32(h - 25), i32(w - 125), 8, rl.GRAY)
+			bar_w := (w - 125) * (pl.track_pos / pl.track_len)
+			rl.DrawRectangle(120, i32(h - 25), i32(bar_w), 8, rl.BLACK)
+
 		}
 
-		vol := rl.TextFormat("volume: %d:%%", int(pl.volume * 100))
-		rl.DrawText(vol, 0, 0, 20, rl.BLACK)
+		vol := rl.TextFormat("%d:%%", int(pl.volume * 100))
+		rl.DrawText(vol, (1 / 2), i32(h - 115), 5, rl.BLACK)
+		rl.DrawRectangle(2, i32(h - 105), 5, 100, rl.GRAY)
+		filled_h := 100 * pl.volume
+		rl.DrawRectangle(2, i32((h - 5) - filled_h), 5, i32(filled_h), rl.BLACK)
+
 
 		rl.EndDrawing()
 
