@@ -6,6 +6,32 @@ import md "metadata"
 import pl "player"
 import rl "vendor:raylib"
 
+KEY_REPEAT_DELAY :: 0.35
+KEY_REPEAT_RATE :: 0.08
+
+// This functions whole approach is to make up the gap in Raylib's key repeat logic
+// repeat_key get's frame time to create an OS-like key repeat based on the globals defined below so i can change if i want
+repeat_key :: proc(ft: ^f64, key: rl.KeyboardKey) -> bool {
+	if rl.IsKeyPressed(key) {
+		ft^ = -rl.GetTime()
+		return true
+	}
+	if !rl.IsKeyDown(key) {
+		return false
+	}
+	t := rl.GetTime()
+	if ft^ < 0 {
+		if t + ft^ >= KEY_REPEAT_DELAY {
+			ft^ = t
+			return true
+		}
+	} else if t - ft^ > KEY_REPEAT_RATE {
+		ft^ = t
+		return true
+	}
+	return false
+}
+
 main :: proc() {
 	// Get home envirment and attach default Music location (for now this is hardcoded)
 	home := os.get_env("HOME", context.allocator)
@@ -13,9 +39,7 @@ main :: proc() {
 
 	// Init the library at our ~/Music path
 	lib_ok := pl.init_library(lib_path)
-	defer pl.uninit_library()
-
-	delete(lib_path)
+	defer pl.uninit_library(); delete(lib_path)
 	delete(home)
 
 	if !lib_ok {
@@ -149,31 +173,4 @@ main :: proc() {
 	}
 
 	rl.CloseWindow()
-}
-
-// This functions whole approach is to make up the gap in Raylib's key repeat logic
-// repeat_key get's frame time to create an OS-like key repeat based on the globals defined below so i can change if i want
-
-KEY_REPEAT_DELAY :: 0.35
-KEY_REPEAT_RATE :: 0.08
-
-repeat_key :: proc(ft: ^f64, key: rl.KeyboardKey) -> bool {
-	if rl.IsKeyPressed(key) {
-		ft^ = -rl.GetTime()
-		return true
-	}
-	if !rl.IsKeyDown(key) {
-		return false
-	}
-	t := rl.GetTime()
-	if ft^ < 0 {
-		if t + ft^ >= KEY_REPEAT_DELAY {
-			ft^ = t
-			return true
-		}
-	} else if t - ft^ > KEY_REPEAT_RATE {
-		ft^ = t
-		return true
-	}
-	return false
 }
